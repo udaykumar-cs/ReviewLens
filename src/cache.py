@@ -22,48 +22,59 @@ class ReviewCache:
 
     def _init_db(self) -> None:
         """Create the cache table if it doesn't already exist."""
-        with self._get_connection() as conn:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS analysis_cache (
-                    text_hash TEXT PRIMARY KEY,
-                    review_text TEXT,
-                    sentiment TEXT NOT NULL,
-                    topics TEXT NOT NULL,
-                    summary TEXT NOT NULL,
-                    needs_reply INTEGER NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-                """
-            )
-            conn.commit()
+        conn = None
+        try:
+            conn = self._get_connection()
+            with conn:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS analysis_cache (
+                        text_hash TEXT PRIMARY KEY,
+                        review_text TEXT,
+                        sentiment TEXT NOT NULL,
+                        topics TEXT NOT NULL,
+                        summary TEXT NOT NULL,
+                        needs_reply INTEGER NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """
+                )
+        finally:
+            if conn:
+                conn.close()
 
     def get(self, text_hash: str) -> Optional[LLMReviewOutput]:
         """Fetch cached analysis by review text hash."""
+        conn = None
         try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT sentiment, topics, summary, needs_reply FROM analysis_cache WHERE text_hash = ?",
-                    (text_hash,)
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT sentiment, topics, summary, needs_reply FROM analysis_cache WHERE text_hash = ?",
+                (text_hash,)
+            )
+            row = cursor.fetchone()
+            if row:
+                topics = json.loads(row["topics"]) if isinstance(row["topics"], str) else row["topics"]
+                return LLMReviewOutput(
+                    sentiment=row["sentiment"],
+                    topics=topics,
+                    summary=row["summary"],
+                    needs_reply=bool(row["needs_reply"])
                 )
-                row = cursor.fetchone()
-                if row:
-                    topics = json.loads(row["topics"]) if isinstance(row["topics"], str) else row["topics"]
-                    return LLMReviewOutput(
-                        sentiment=row["sentiment"],
-                        topics=topics,
-                        summary=row["summary"],
-                        needs_reply=bool(row["needs_reply"])
-                    )
         except Exception as e:
             logger.warning(f"Cache get error for hash {text_hash}: {e}")
+        finally:
+            if conn:
+                conn.close()
         return None
 
     def set(self, text_hash: str, review_text: str, analysis: LLMReviewOutput) -> None:
         """Store analyzed review in cache."""
+        conn = None
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            with conn:
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO analysis_cache 
@@ -79,41 +90,49 @@ class ReviewCache:
                         1 if analysis.needs_reply else 0
                     )
                 )
-                conn.commit()
         except Exception as e:
             logger.warning(f"Cache set error for hash {text_hash}: {e}")
+        finally:
+            if conn:
+                conn.close()
 
     def get_many(self, hashes: List[str]) -> Dict[str, LLMReviewOutput]:
         """Bulk retrieval of cached analyses."""
         results = {}
         if not hashes:
             return results
+        conn = None
         try:
-            with self._get_connection() as conn:
-                placeholders = ",".join("?" for _ in hashes)
-                cursor = conn.cursor()
-                cursor.execute(
-                    f"SELECT text_hash, sentiment, topics, summary, needs_reply FROM analysis_cache WHERE text_hash IN ({placeholders})",
-                    hashes
+            conn = self._get_connection()
+            placeholders = ",".join("?" for _ in hashes)
+            cursor = conn.cursor()
+            cursor.execute(
+                f"SELECT text_hash, sentiment, topics, summary, needs_reply FROM analysis_cache WHERE text_hash IN ({placeholders})",
+                hashes
+            )
+            for row in cursor.fetchall():
+                topics = json.loads(row["topics"]) if isinstance(row["topics"], str) else row["topics"]
+                results[row["text_hash"]] = LLMReviewOutput(
+                    sentiment=row["sentiment"],
+                    topics=topics,
+                    summary=row["summary"],
+                    needs_reply=bool(row["needs_reply"])
                 )
-                for row in cursor.fetchall():
-                    topics = json.loads(row["topics"]) if isinstance(row["topics"], str) else row["topics"]
-                    results[row["text_hash"]] = LLMReviewOutput(
-                        sentiment=row["sentiment"],
-                        topics=topics,
-                        summary=row["summary"],
-                        needs_reply=bool(row["needs_reply"])
-                    )
         except Exception as e:
             logger.warning(f"Bulk cache retrieval error: {e}")
+        finally:
+            if conn:
+                conn.close()
         return results
 
     def set_many(self, items: List[tuple]) -> None:
         """Bulk insertion of (text_hash, review_text, LLMReviewOutput)."""
         if not items:
             return
+        conn = None
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            with conn:
                 conn.executemany(
                     """
                     INSERT OR REPLACE INTO analysis_cache 
@@ -132,16 +151,22 @@ class ReviewCache:
                         for h, text, analysis in items
                     ]
                 )
-                conn.commit()
         except Exception as e:
             logger.warning(f"Bulk cache insertion error: {e}")
+        finally:
+            if conn:
+                conn.close()
 
     def count(self) -> int:
         """Total cached entries."""
+        conn = None
         try:
-            with self._get_connection() as conn:
-                cursor = conn.cursor()
-                cursor.execute("SELECT COUNT(*) FROM analysis_cache")
-                return cursor.fetchone()[0]
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM analysis_cache")
+            return cursor.fetchone()[0]
         except Exception:
             return 0
+        finally:
+            if conn:
+                conn.close()
