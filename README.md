@@ -1,9 +1,6 @@
 # ReviewLens - AI Review Insights & Intelligence Platform
 
-> **Candidate Technical Assessment Submission**  
-> **Role:** Associate Software Developer (Batch 2027) &bull; CEDCOSS OC.26084.2027.64846  
-> **Stack:** Python 3.11+, Flask, Pydantic v2, SQLite, Tailwind CSS, Google Gemini / Groq API  
-> **Key Strengths:** Resilient parsing of messy data, Prompt Injection Defense (R012), SQLite Text-Hash Caching, Exponential Backoff Batching, Rating Mismatch Detection, and On-Click Merchant Reply Generation.
+> A lightweight, production-grade review analytics platform that transforms messy, real-world customer reviews into structured, actionable business intelligence with prompt injection defense, SQLite text-hash caching, and on-click merchant response generation.
 
 ---
 

@@ -1,4 +1,10 @@
-﻿commit 36ddad7ca70c698e64284b0ea4bdaf2c3b37ace4
+﻿commit 91179df3b98fb955728395a9e345aae8c7a3b308
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:56:32 +0530
+
+    style: polish README and UI footer to professional product standards
+
+commit 06ab5f5ebf0ce4a3ede1c28dff4d448266a8b4bf
 Author: Uday Kumar <kumaruday9973@gmail.com>
 Date:   2026-11-18 14:05:16 +0530
 
