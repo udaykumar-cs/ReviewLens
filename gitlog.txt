@@ -1,0 +1,71 @@
+﻿commit 36ddad7ca70c698e64284b0ea4bdaf2c3b37ace4
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:05:16 +0530
+
+    chore(gitlog): add commit history log file for submission evaluation
+
+commit c10f9e68897ad75ea02e0007403d10259dd00090
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:04:44 +0530
+
+    docs: add detailed README with architecture, prompt defense analysis, and screenshots
+
+commit ab695713538bb3b3b69f72baf10ce0c33eaafac3
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:02:51 +0530
+
+    test: add comprehensive automated test suite for cleaning, validation, prompt injection, and caching
+
+commit 0ca3b955aa2aa75b81df6b7722ad78ca28cc9885
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:00:41 +0530
+
+    feat(docker): add production Dockerfile and docker-compose orchestration
+
+commit a3113b43e4378994cff6e529c8dc030fbf4ede29
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 14:00:15 +0530
+
+    feat(ui): build single-screen dashboard with live filters, summary cards, and suggested reply modal
+
+commit 6c821e81fc855d1a9cae3de498ab3609103d5e73
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:58:26 +0530
+
+    feat(api): implement Flask REST API endpoints for upload, suggested replies, and healthcheck
+
+commit 47f0a6b678cdf4a29930d8abd4d8b89ea9160d57
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:46:42 +0530
+
+    feat(pipeline): build orchestration engine with batching, cache lookup, deduplication, and metrics
+
+commit 30154d747e65f9fe02076001428916897742dace
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:45:30 +0530
+
+    feat(analyzer): implement LLM engine with prompt injection defense, strict schema validation, and fallback
+
+commit 9a2460ca907d5a56cd71a30201a857dd41eec009
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:44:31 +0530
+
+    feat(cache): implement persistent SQLite caching with SHA-256 text hashing
+
+commit 841bc3c239fa8ef273dd81471e6915b37daf8796
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:44:04 +0530
+
+    feat(cleaner): implement CSV parser, sanitization, bad row handling, and deduplication
+
+commit 690211860b0d98d5853ef4655ee6ea45f47c5d87
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:26:07 +0530
+
+    feat(config): add environment loader, .env.example template, and requirements.txt
+
+commit a8669a190a75336eda5f892f7a2ebe49b0f0b78c
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-18 13:23:54 +0530
+
+    chore: initial repository setup with .gitignore and raw messy reviews dataset
