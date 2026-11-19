@@ -1,6 +1,13 @@
-# ReviewLens - AI Review Insights & Intelligence Platform
+# ReviewLens &bull; AI-Powered Review Intelligence Suite
 
-> A lightweight, production-grade review analytics platform that transforms messy, real-world customer reviews into structured, actionable business intelligence with prompt injection defense, SQLite text-hash caching, and on-click merchant response generation.
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![Flask 3](https://img.shields.io/badge/Framework-Flask%203-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![Pydantic v2](https://img.shields.io/badge/Validation-Pydantic%20v2-e92063?logo=pydantic&logoColor=white)](https://docs.pydantic.dev/)
+[![SQLite Cache](https://img.shields.io/badge/Caching-SQLite%20SHA--256-003B57?logo=sqlite&logoColor=white)](https://sqlite.org/)
+[![Security](https://img.shields.io/badge/Security-Prompt%20Injection%20Shield-7928CA?logo=shield&logoColor=white)](#prompt-engineering--prompt-injection-defense-r012)
+[![Tests Passing](https://img.shields.io/badge/Tests-16%2F16%20Passed-10b981)](tests/)
+
+> **ReviewLens** is an AI-powered customer review intelligence platform that transforms noisy, multilingual, and adversarial e-commerce feedback into structured, actionable merchant insights. It features multi-layered prompt injection defense, SHA-256 SQLite text caching, rating-mismatch audits, and an on-demand tone-adaptive merchant response studio.
 
 ---
 

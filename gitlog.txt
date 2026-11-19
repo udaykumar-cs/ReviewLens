@@ -1,4 +1,10 @@
-﻿commit bae296a441a253fc4cc2fbad4120322918e235d6
+﻿commit 3312fab1fc54d07f88923bc534d951da1915812b
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-19 10:22:32 +0530
+
+    docs: enrich README with visual architecture badges and crisp product description
+
+commit be4958ff58f318d892a70ab2e521dbb1f7ca72d8
 Author: Uday Kumar <kumaruday9973@gmail.com>
 Date:   2026-11-19 10:18:20 +0530
 
