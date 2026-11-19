@@ -1,4 +1,10 @@
-﻿commit 91179df3b98fb955728395a9e345aae8c7a3b308
+﻿commit bae296a441a253fc4cc2fbad4120322918e235d6
+Author: Uday Kumar <kumaruday9973@gmail.com>
+Date:   2026-11-19 10:18:20 +0530
+
+    feat(ui): upgrade to executive AI analytics suite with dark theme, interactive charts, tone switcher, and audit report
+
+commit 1766bb34b923ed025e5fb2d10013352462ca361b
 Author: Uday Kumar <kumaruday9973@gmail.com>
 Date:   2026-11-18 14:56:32 +0530
 

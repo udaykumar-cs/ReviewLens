@@ -433,30 +433,51 @@ class ReviewAnalyzer:
 
         return results
 
-    def suggest_merchant_reply(self, product: str, review_text: str, summary: str, topics: List[str]) -> str:
+    def suggest_merchant_reply(self, product: str, review_text: str, summary: str, topics: List[str], tone: str = "empathetic") -> str:
         """
         Generates an on-click suggested reply for a review marked needs_reply (Requirement 7).
+        Supports customizable tone: 'empathetic', 'solution', or 'refund'.
         """
         topics_str = ", ".join(topics) if topics else "general feedback"
+        tone_clean = (tone or "empathetic").lower()
 
         if self.provider == "mock" or not (config.GEMINI_API_KEY or config.GROQ_API_KEY):
-            # Intelligent fallback reply
-            if "delivery" in topics or "arrived" in review_text.lower():
-                return f"Dear Customer, we sincerely apologize for the delay with your {product}. We understand your frustration and are prioritizing your tracking inquiry with our shipping partner. Please reach out to support@store.com with your order details so we can make this right!"
-            elif "size_fit" in topics or "size" in review_text.lower():
-                return f"Hi there, thank you for sharing your feedback on {product}. We apologize that the sizing didn't match your expectations. We offer a hassle-free, complimentary exchange. Please contact our support team at support@store.com to swap this for your preferred size!"
-            elif "quality" in topics or "broken" in review_text.lower() or "stopped working" in review_text.lower():
-                return f"Dear Customer, we are truly sorry that your {product} did not meet our quality standards. This is certainly not the experience we strive to provide. We would love to issue a free replacement or a full refund immediately. Please connect with us at support@store.com."
-            else:
-                return f"Dear Customer, thank you for bringing this issue regarding {product} to our attention. We are investigating this matter and would like to resolve it for you right away. Please get in touch with our team at support@store.com."
+            # Tone-adaptive offline fallback replies
+            if tone_clean == "solution":
+                if "size_fit" in topics or "size" in review_text.lower():
+                    return f"Hi, thanks for reaching out. We can arrange a direct size exchange for your {product} right away. Please reply to support@store.com with your preferred size and order ID so our team can dispatch the replacement immediately."
+                elif "delivery" in topics or "arrived" in review_text.lower():
+                    return f"Hello, we have escalated your {product} shipment with our logistics team. Please email your order ID to support@store.com and we will track down your package or re-ship it within 24 hours."
+                else:
+                    return f"Hi, thanks for the feedback on {product}. We want to resolve this technical issue quickly for you. Please connect with our technical specialists at support@store.com for troubleshooting or a fast product exchange."
+
+            elif tone_clean == "refund":
+                return f"Dear Valued Customer, we are deeply sorry for your disappointing experience with {product}. We would like to issue you an immediate 100% full refund and a complimentary gift voucher for your trouble. Please confirm your order number at support@store.com."
+
+            else:  # empathetic
+                if "delivery" in topics or "arrived" in review_text.lower():
+                    return f"Dear Customer, we sincerely apologize for the delay with your {product}. We understand your frustration and are prioritizing your tracking inquiry with our shipping partner. Please reach out to support@store.com with your order details so we can make this right!"
+                elif "size_fit" in topics or "size" in review_text.lower():
+                    return f"Hi there, thank you for sharing your feedback on {product}. We apologize that the sizing didn't match your expectations. We offer a hassle-free, complimentary exchange. Please contact our support team at support@store.com to swap this for your preferred size!"
+                elif "quality" in topics or "broken" in review_text.lower() or "stopped working" in review_text.lower():
+                    return f"Dear Customer, we are truly sorry that your {product} did not meet our quality standards. This is certainly not the experience we strive to provide. We would love to issue a free replacement or a full refund immediately. Please connect with us at support@store.com."
+                else:
+                    return f"Dear Customer, thank you for bringing this issue regarding {product} to our attention. We are investigating this matter and would like to resolve it for you right away. Please get in touch with our team at support@store.com."
+
+        tone_instructions = {
+            "empathetic": "Write with warmth, deep empathy, and a sincere apology. Prioritize customer sentiment.",
+            "solution": "Write with a direct, proactive, and action-focused tone. Offer step-by-step resolution or exchange.",
+            "refund": "Write with an apologetic tone and offer an immediate full refund or complimentary replacement."
+        }.get(tone_clean, "Write with a polite and empathetic tone.")
 
         prompt = (
-            f"You are a polite, helpful, and empathetic customer support manager for an e-commerce brand.\n"
+            f"You are a customer support manager for an e-commerce brand.\n"
             f"A customer left a critical review for '{product}'.\n"
             f"Review: \"{review_text}\"\n"
             f"Issue summary: {summary}\n"
-            f"Topics: {topics_str}\n\n"
-            f"Write a concise (2-3 sentences), warm, and actionable merchant reply. Acknowledge the exact issue, apologize sincerely, and offer a clear resolution (replacement, refund, or contact link). Return ONLY the reply text."
+            f"Topics: {topics_str}\n"
+            f"Tone Requirement: {tone_instructions}\n\n"
+            f"Write a concise (2-3 sentences) merchant reply tailored to the required tone. Return ONLY the reply text."
         )
 
         try:

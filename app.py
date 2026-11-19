@@ -101,6 +101,7 @@ def suggest_reply():
     review_text = data.get("review_text", "")
     summary = data.get("summary", "")
     topics = data.get("topics", [])
+    tone = data.get("tone", "empathetic")
 
     if not review_text:
         return jsonify({"error": "Missing review_text for generating reply"}), 400
@@ -110,7 +111,8 @@ def suggest_reply():
             product=product,
             review_text=review_text,
             summary=summary,
-            topics=topics
+            topics=topics,
+            tone=tone
         )
         return jsonify({"reply": reply}), 200
     except Exception as e:

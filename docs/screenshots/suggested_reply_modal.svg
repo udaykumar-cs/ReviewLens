@@ -1,41 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%">
   <defs>
-    <filter id="modalShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-opacity="0.25"/>
+    <filter id="modalGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.8"/>
     </filter>
   </defs>
 
   <!-- Darkened backdrop -->
-  <rect width="1000" height="600" fill="#0f172a" opacity="0.65" />
+  <rect width="1000" height="600" fill="#07090E" opacity="0.85" />
 
   <!-- Modal card -->
-  <g transform="translate(250, 100)">
-    <rect width="500" height="400" rx="16" fill="#ffffff" filter="url(#modalShadow)" />
+  <g transform="translate(240, 70)">
+    <rect width="520" height="460" rx="16" fill="#111726" stroke="#1e293b" filter="url(#modalGlow)" />
 
     <!-- Modal Header -->
-    <text x="30" y="45" font-family="Inter, sans-serif" font-size="16" font-weight="bold" fill="#0f172a">🤖 Suggested Merchant Reply</text>
-    <text x="450" y="45" font-family="sans-serif" font-size="16" fill="#94a3b8" cursor="pointer">✕</text>
-    <line x1="0" y1="65" x2="500" y2="65" stroke="#f1f5f9" />
+    <text x="30" y="42" font-family="Inter, sans-serif" font-size="16" font-weight="bold" fill="#ffffff">🤖 Merchant AI Response Studio</text>
+    <text x="475" y="42" font-family="sans-serif" font-size="16" fill="#64748b" cursor="pointer">✕</text>
+    <line x1="0" y1="60" x2="520" y2="60" stroke="#1e293b" />
 
     <!-- Customer Review Context Box -->
-    <text x="30" y="95" font-family="sans-serif" font-size="11" font-weight="bold" fill="#64748b">CUSTOMER COMPLAINT</text>
-    <rect x="30" y="105" width="440" height="65" rx="8" fill="#f8fafc" stroke="#e2e8f0" />
-    <text x="42" y="128" font-family="sans-serif" font-size="11" font-weight="bold" fill="#0f172a">Running Shoes Pro (R020)</text>
-    <text x="42" y="148" font-family="sans-serif" font-size="11" fill="#475569" font-style="italic">"Received a used pair with mud on the sole!!! Who does quality check???"</text>
+    <text x="30" y="85" font-family="sans-serif" font-size="10" font-weight="bold" fill="#64748b">CUSTOMER COMPLAINT CONTEXT</text>
+    <rect x="30" y="95" width="460" height="65" rx="8" fill="#0B0F19" stroke="#1e293b" />
+    <text x="42" y="118" font-family="sans-serif" font-size="11" font-weight="bold" fill="#ffffff">Running Shoes Pro (R020)</text>
+    <text x="42" y="140" font-family="sans-serif" font-size="11" fill="#94a3b8" font-style="italic">"Received a used pair with mud on the sole!!! Who does quality check???"</text>
+
+    <!-- Tone Selector Chips (Unique feature) -->
+    <text x="30" y="185" font-family="sans-serif" font-size="10" font-weight="bold" fill="#38bdf8">SELECT RESPONSE TONE STRATEGY</text>
+    <rect x="30" y="195" width="140" height="28" rx="6" fill="#1e1b4b" stroke="#6366f1" />
+    <text x="40" y="213" font-family="sans-serif" font-size="10" font-weight="bold" fill="#a5b4fc">💖 Empathetic</text>
+
+    <rect x="180" y="195" width="140" height="28" rx="6" fill="#161F33" stroke="#334155" />
+    <text x="190" y="213" font-family="sans-serif" font-size="10" font-weight="bold" fill="#cbd5e1">⚡ Fast Solution</text>
+
+    <rect x="330" y="195" width="160" height="28" rx="6" fill="#161F33" stroke="#334155" />
+    <text x="340" y="213" font-family="sans-serif" font-size="10" font-weight="bold" fill="#cbd5e1">🎁 100% Refund Voucher</text>
 
     <!-- AI Generated Reply Box -->
-    <text x="30" y="195" font-family="sans-serif" font-size="11" font-weight="bold" fill="#4f46e5">AI GENERATED MERCHANT RESPONSE (EDITABLE)</text>
-    <rect x="30" y="205" width="440" height="110" rx="8" fill="#f5f3ff" stroke="#ddd6fe" />
-    <text x="42" y="230" font-family="sans-serif" font-size="12" fill="#1e1b4b" font-weight="500">Dear Customer,</text>
-    <text x="42" y="252" font-family="sans-serif" font-size="11.5" fill="#312e81">We are truly horrified to hear you received a pair with mud on the sole.</text>
-    <text x="42" y="272" font-family="sans-serif" font-size="11.5" fill="#312e81">This violates our strict quality protocol. We are shipping a brand new</text>
-    <text x="42" y="292" font-family="sans-serif" font-size="11.5" fill="#312e81">replacement pair immediately and refunding your order in full.</text>
+    <text x="30" y="250" font-family="sans-serif" font-size="10" font-weight="bold" fill="#94a3b8">SYNTHESIZED MERCHANT REPLY</text>
+    <rect x="30" y="260" width="460" height="120" rx="8" fill="#0B0F19" stroke="#3b82f6" stroke-opacity="0.4" />
+    <text x="42" y="285" font-family="sans-serif" font-size="12" fill="#ffffff" font-weight="bold">Dear Customer,</text>
+    <text x="42" y="308" font-family="sans-serif" font-size="11.5" fill="#cbd5e1">We are deeply horrified that you received a pair with mud on the sole.</text>
+    <text x="42" y="328" font-family="sans-serif" font-size="11.5" fill="#cbd5e1">This completely fails our warehouse inspection standards. We would love</text>
+    <text x="42" y="348" font-family="sans-serif" font-size="11.5" fill="#cbd5e1">to dispatch a brand new pair immediately and issue a full refund to support@store.com.</text>
 
     <!-- Actions -->
-    <rect x="250" y="340" width="80" height="36" rx="8" fill="#ffffff" stroke="#cbd5e1" />
-    <text x="272" y="363" font-family="sans-serif" font-size="12" font-weight="bold" fill="#475569">Close</text>
+    <rect x="280" y="400" width="80" height="36" rx="8" fill="#161F33" stroke="#334155" />
+    <text x="302" y="423" font-family="sans-serif" font-size="12" font-weight="bold" fill="#94a3b8">Close</text>
 
-    <rect x="345" y="340" width="125" height="36" rx="8" fill="#4f46e5" />
-    <text x="360" y="363" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff">📋 Copy Reply</text>
+    <rect x="370" y="400" width="120" height="36" rx="8" fill="#4f46e5" />
+    <text x="385" y="423" font-family="sans-serif" font-size="12" font-weight="bold" fill="#ffffff">📋 Copy Reply</text>
   </g>
 </svg>

@@ -1,7 +1,11 @@
-// ReviewLens Dashboard Interactive Frontend
+// ReviewLens Dashboard - Enterprise AI Analytics Suite
 
 let currentDataset = null;
 let currentFilteredReviews = [];
+let sentimentChartInstance = null;
+let topicsChartInstance = null;
+let activeModalReview = null;
+let currentReplyTone = "empathetic";
 
 document.addEventListener("DOMContentLoaded", () => {
   if (window.lucide) {
@@ -27,16 +31,16 @@ function setupEventListeners() {
   // Drag and drop
   dropzoneCard.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropzoneCard.classList.add("border-indigo-500", "bg-indigo-50/20");
+    dropzoneCard.classList.add("border-cyan-500", "bg-cyan-500/5");
   });
 
   dropzoneCard.addEventListener("dragleave", () => {
-    dropzoneCard.classList.remove("border-indigo-500", "bg-indigo-50/20");
+    dropzoneCard.classList.remove("border-cyan-500", "bg-cyan-500/5");
   });
 
   dropzoneCard.addEventListener("drop", (e) => {
     e.preventDefault();
-    dropzoneCard.classList.remove("border-indigo-500", "bg-indigo-50/20");
+    dropzoneCard.classList.remove("border-cyan-500", "bg-cyan-500/5");
     if (e.dataTransfer.files.length > 0) {
       uploadFile(e.dataTransfer.files[0]);
     }
@@ -72,7 +76,7 @@ async function checkHealth() {
       const data = await res.json();
       const badge = document.getElementById("providerBadge");
       const provName = (data.provider || "gemini").toUpperCase();
-      badge.textContent = `Engine: ${provName} (${data.cached_reviews} cached)`;
+      badge.textContent = `ENGINE: ${provName} (${data.cached_reviews} CACHED)`;
     }
   } catch (err) {
     console.warn("Health check error:", err);
@@ -92,7 +96,7 @@ function hideLoading() {
 }
 
 async function uploadFile(file) {
-  showLoading(`Analyzing '${file.name}' with ReviewLens...`);
+  showLoading(`Analyzing '${file.name}' with ReviewLens AI pipeline...`);
   const formData = new FormData();
   formData.append("file", file);
 
@@ -149,6 +153,30 @@ async function clearCache() {
   }
 }
 
+// Tab Switching
+function switchTab(tabName) {
+  const tabs = ["overview", "products", "actionQueue", "allReviews"];
+  tabs.forEach(t => {
+    const el = document.getElementById(`tab${capitalize(t)}`);
+    const btn = document.getElementById(`tab${capitalize(t)}Btn`);
+    if (t === tabName) {
+      el.classList.remove("hidden");
+      btn.className = "px-4 py-2.5 rounded-lg bg-indigo-600/20 text-cyan-400 border border-indigo-500/30 flex items-center space-x-2 transition font-bold";
+    } else {
+      el.classList.add("hidden");
+      btn.className = "px-4 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-dark-800 flex items-center space-x-2 transition font-semibold";
+    }
+  });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function renderDashboard(data) {
   currentDataset = data;
   const metrics = data.metrics;
@@ -178,11 +206,18 @@ function renderDashboard(data) {
   document.getElementById("cardNegativeCount").textContent = `${metrics.sentiment_breakdown.negative_count} reviews`;
 
   document.getElementById("cardNeedsReply").textContent = metrics.needs_reply_count;
+  document.getElementById("tabNeedsReplyCount").textContent = metrics.needs_reply_count;
   document.getElementById("cardAgreementPct").textContent = `${metrics.rating_agreement_pct}%`;
 
   // Mismatch count subtext
   const mismatchCount = reviews.filter(r => r.is_rating_mismatch).length;
-  document.getElementById("cardMismatchCount").textContent = `${mismatchCount} review(s) flagged as mismatch`;
+  document.getElementById("cardMismatchCount").textContent = `${mismatchCount} review(s) flagged mismatch`;
+
+  // Dynamic Executive Summary Briefing
+  renderExecutiveSummary(metrics);
+
+  // Render Charts
+  renderCharts(metrics);
 
   // Top 3 Praises
   renderPraises(metrics.top_3_praises);
@@ -192,6 +227,9 @@ function renderDashboard(data) {
 
   // Product View Cards
   renderProductCards(metrics.product_view);
+
+  // Populate Action Queue
+  renderActionQueue(reviews.filter(r => r.needs_reply));
 
   // Populate product filter dropdown
   populateProductFilter(metrics.products);
@@ -203,25 +241,154 @@ function renderDashboard(data) {
   applyFilters();
 }
 
+function renderExecutiveSummary(metrics) {
+  const container = document.getElementById("executiveSummaryText");
+  const posPct = metrics.sentiment_breakdown.positive_pct;
+  const negPct = metrics.sentiment_breakdown.negative_pct;
+  const topComplaint = metrics.top_3_complaints[0] ? metrics.top_3_complaints[0].topic : "quality";
+  const topPraise = metrics.top_3_praises[0] ? metrics.top_3_praises[0].topic : "satisfaction";
+
+  let healthStatus = posPct >= 50 ? "Healthy" : (posPct >= 35 ? "Moderate Attention Needed" : "Critical Intervention Required");
+
+  container.innerHTML = `
+    Store Sentiment Health is rated <strong class="text-cyan-400 font-bold">${healthStatus}</strong> (${posPct}% positive vs ${negPct}% negative). 
+    Customers strongly praise product <strong class="text-emerald-400 font-bold">${topPraise}</strong>, but severe customer friction exists in <strong class="text-rose-400 font-bold">${topComplaint}</strong> and delayed support response. 
+    Immediate merchant action is recommended on the <strong class="text-amber-400 font-bold">${metrics.needs_reply_count} flagged customer complaints</strong> in the Priority Queue.
+  `;
+}
+
+function renderCharts(metrics) {
+  // 1. Sentiment Donut Chart
+  const ctxSentiment = document.getElementById("sentimentChart").getContext("2d");
+  const posCount = metrics.sentiment_breakdown.positive_count;
+  const neuCount = metrics.sentiment_breakdown.neutral_count;
+  const negCount = metrics.sentiment_breakdown.negative_count;
+
+  document.getElementById("chartPosLabel").textContent = `${metrics.sentiment_breakdown.positive_pct}%`;
+  document.getElementById("chartNeuLabel").textContent = `${metrics.sentiment_breakdown.neutral_pct}%`;
+  document.getElementById("chartNegLabel").textContent = `${metrics.sentiment_breakdown.negative_pct}%`;
+
+  if (sentimentChartInstance) {
+    sentimentChartInstance.destroy();
+  }
+
+  sentimentChartInstance = new Chart(ctxSentiment, {
+    type: "doughnut",
+    data: {
+      labels: ["Positive", "Neutral", "Negative"],
+      datasets: [{
+        data: [posCount, neuCount, negCount],
+        backgroundColor: [
+          "#10b981", // Emerald
+          "#64748b", // Slate
+          "#f43f5e"  // Rose
+        ],
+        borderWidth: 2,
+        borderColor: "#0B0F19",
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#161F33",
+          titleColor: "#ffffff",
+          bodyColor: "#94a3b8",
+          borderColor: "#334155",
+          borderWidth: 1
+        }
+      },
+      cutout: "74%"
+    }
+  });
+
+  // 2. Topic Bar Chart
+  const ctxTopics = document.getElementById("topicsChart").getContext("2d");
+
+  // Collect frequency per topic from both complaints and praises
+  const topicsList = ["quality", "delivery", "price", "packaging", "support", "size_fit", "other"];
+  const praisesMap = {};
+  const complaintsMap = {};
+
+  metrics.top_3_praises.forEach(p => { praisesMap[p.topic] = p.count; });
+  metrics.top_3_complaints.forEach(c => { complaintsMap[c.topic] = c.count; });
+
+  const praisesData = topicsList.map(t => praisesMap[t] || 0);
+  const complaintsData = topicsList.map(t => complaintsMap[t] || 0);
+
+  if (topicsChartInstance) {
+    topicsChartInstance.destroy();
+  }
+
+  topicsChartInstance = new Chart(ctxTopics, {
+    type: "bar",
+    data: {
+      labels: ["Quality", "Delivery", "Price", "Packaging", "Support", "Size/Fit", "Other"],
+      datasets: [
+        {
+          label: "Praises (Positive)",
+          data: praisesData,
+          backgroundColor: "rgba(16, 185, 129, 0.7)",
+          borderColor: "#10b981",
+          borderWidth: 1,
+          borderRadius: 4
+        },
+        {
+          label: "Complaints (Negative)",
+          data: complaintsData,
+          backgroundColor: "rgba(244, 63, 94, 0.7)",
+          borderColor: "#f43f5e",
+          borderWidth: 1,
+          borderRadius: 4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          grid: { color: "rgba(51, 65, 85, 0.3)" },
+          ticks: { color: "#94a3b8", font: { size: 10 } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: "rgba(51, 65, 85, 0.3)" },
+          ticks: { color: "#94a3b8", stepSize: 2 }
+        }
+      },
+      plugins: {
+        legend: {
+          position: "top",
+          labels: { color: "#cbd5e1", font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
 function renderPraises(praises) {
   const container = document.getElementById("topPraisesList");
   container.innerHTML = "";
   if (!praises || praises.length === 0) {
-    container.innerHTML = `<div class="text-xs text-slate-400 italic">No praises recorded yet.</div>`;
+    container.innerHTML = `<div class="text-xs text-slate-500 italic">No praises recorded yet.</div>`;
     return;
   }
   praises.forEach((item, idx) => {
     const el = document.createElement("div");
-    el.className = "flex items-start justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 text-xs";
+    el.className = "flex items-start justify-between p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20 text-xs";
     el.innerHTML = `
       <div class="space-y-1 pr-2">
         <div class="flex items-center space-x-2">
-          <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-[10px]">${idx + 1}</span>
-          <span class="font-semibold text-emerald-950 capitalize">${item.topic}</span>
+          <span class="w-5 h-5 rounded-full bg-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-[10px] border border-emerald-500/40">${idx + 1}</span>
+          <span class="font-bold text-white capitalize">${item.topic}</span>
         </div>
-        <p class="text-slate-600 italic">"${item.sample || 'Positive customer satisfaction'}"</p>
+        <p class="text-slate-300 italic">"${item.sample || 'Positive customer satisfaction'}"</p>
       </div>
-      <span class="px-2 py-1 font-mono font-bold text-emerald-700 bg-emerald-100/70 rounded-md border border-emerald-200">
+      <span class="px-2 py-1 font-mono font-bold text-emerald-300 bg-emerald-950/60 rounded-md border border-emerald-500/30 whitespace-nowrap">
         ${item.count} mentions
       </span>
     `;
@@ -233,21 +400,21 @@ function renderComplaints(complaints) {
   const container = document.getElementById("topComplaintsList");
   container.innerHTML = "";
   if (!complaints || complaints.length === 0) {
-    container.innerHTML = `<div class="text-xs text-slate-400 italic">No complaints recorded yet.</div>`;
+    container.innerHTML = `<div class="text-xs text-slate-500 italic">No complaints recorded yet.</div>`;
     return;
   }
   complaints.forEach((item, idx) => {
     const el = document.createElement("div");
-    el.className = "flex items-start justify-between p-3 rounded-xl bg-rose-50/50 border border-rose-100 text-xs";
+    el.className = "flex items-start justify-between p-3 rounded-xl bg-rose-950/20 border border-rose-500/20 text-xs";
     el.innerHTML = `
       <div class="space-y-1 pr-2">
         <div class="flex items-center space-x-2">
-          <span class="w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center font-bold text-[10px]">${idx + 1}</span>
-          <span class="font-semibold text-rose-950 capitalize">${item.topic}</span>
+          <span class="w-5 h-5 rounded-full bg-rose-500/30 text-rose-400 flex items-center justify-center font-bold text-[10px] border border-rose-500/40">${idx + 1}</span>
+          <span class="font-bold text-white capitalize">${item.topic}</span>
         </div>
-        <p class="text-slate-600 italic">"${item.sample || 'Reported customer grievance'}"</p>
+        <p class="text-slate-300 italic">"${item.sample || 'Reported customer grievance'}"</p>
       </div>
-      <span class="px-2 py-1 font-mono font-bold text-rose-700 bg-rose-100/70 rounded-md border border-rose-200">
+      <span class="px-2 py-1 font-mono font-bold text-rose-300 bg-rose-950/60 rounded-md border border-rose-500/30 whitespace-nowrap">
         ${item.count} complaints
       </span>
     `;
@@ -267,37 +434,75 @@ function renderProductCards(productView) {
     const negPct = Math.round((data.negative / total) * 100);
 
     const issuesTags = data.top_issues.length > 0
-      ? data.top_issues.map(t => `<span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 text-[10px]">${t}</span>`).join(" ")
-      : `<span class="text-slate-400 text-[10px]">None reported</span>`;
+      ? data.top_issues.map(t => `<span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-500/30 text-[10px] font-mono">${t}</span>`).join(" ")
+      : `<span class="text-slate-500 text-[10px]">None reported</span>`;
 
     const card = document.createElement("div");
-    card.className = "p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer bg-white space-y-3";
+    card.className = "p-4 rounded-xl border border-slate-800 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/5 transition-all cursor-pointer bg-dark-850/80 space-y-3";
     card.onclick = () => {
       document.getElementById("filterProduct").value = name;
+      switchTab("allReviews");
       applyFilters();
     };
     card.innerHTML = `
       <div class="flex justify-between items-start">
-        <h4 class="font-bold text-xs text-slate-900 leading-tight">${name}</h4>
-        <span class="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">${data.total} rev</span>
+        <h4 class="font-bold text-xs text-white leading-tight">${name}</h4>
+        <span class="text-[10px] font-mono font-bold text-slate-400 bg-dark-800 px-1.5 py-0.5 rounded border border-slate-700">${data.total} rev</span>
       </div>
       <!-- Mini sentiment bar -->
-      <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden flex">
+      <div class="w-full bg-dark-800 h-2 rounded-full overflow-hidden flex border border-slate-700/50">
         <div style="width: ${posPct}%" class="bg-emerald-500" title="Positive: ${posPct}%"></div>
         <div style="width: ${neuPct}%" class="bg-slate-400" title="Neutral: ${neuPct}%"></div>
         <div style="width: ${negPct}%" class="bg-rose-500" title="Negative: ${negPct}%"></div>
       </div>
-      <div class="flex justify-between items-center text-[10px] text-slate-500">
-        <span class="text-emerald-600 font-medium">${posPct}% Pos</span>
-        <span class="text-rose-600 font-medium">${negPct}% Neg</span>
+      <div class="flex justify-between items-center text-[10px] text-slate-400">
+        <span class="text-emerald-400 font-semibold">${posPct}% Pos</span>
+        <span class="text-rose-400 font-semibold">${negPct}% Neg</span>
       </div>
-      <div class="pt-1 border-t border-slate-100">
-        <div class="text-[10px] text-slate-400 mb-1">Top Issues:</div>
+      <div class="pt-2 border-t border-slate-800/80">
+        <div class="text-[10px] text-slate-500 mb-1">Top Defect Drivers:</div>
         <div class="flex flex-wrap gap-1">${issuesTags}</div>
       </div>
     `;
     container.appendChild(card);
   });
+}
+
+function renderActionQueue(needsReplyReviews) {
+  const container = document.getElementById("actionQueueContainer");
+  const badge = document.getElementById("actionQueueBadge");
+  badge.textContent = `${needsReplyReviews.length} Urgent Items`;
+  container.innerHTML = "";
+
+  if (needsReplyReviews.length === 0) {
+    container.innerHTML = `<div class="p-8 text-center text-slate-500 text-xs">All clear! No pending customer replies required.</div>`;
+    return;
+  }
+
+  needsReplyReviews.forEach(r => {
+    const card = document.createElement("div");
+    card.className = "bg-dark-850/80 border border-amber-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md";
+    card.innerHTML = `
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <span class="font-mono text-xs font-bold text-amber-400">${r.review_id}</span>
+          <span class="text-xs font-semibold text-white">&bull; ${r.product}</span>
+          <span class="px-2 py-0.5 rounded text-[10px] bg-rose-950/60 text-rose-300 border border-rose-500/30 font-bold capitalize">${r.sentiment || 'Complaint'}</span>
+        </div>
+        <p class="text-xs text-slate-300 italic">"${r.review_text}"</p>
+        <p class="text-[11px] text-slate-400"><strong class="text-slate-300">Issue:</strong> ${r.summary}</p>
+      </div>
+      <button onclick="handleSuggestReply('${r.review_id}')" class="self-start sm:self-center whitespace-nowrap inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-amber-600 to-indigo-600 hover:from-amber-500 hover:to-indigo-500 rounded-lg shadow-sm">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-cyan-300"></i>
+        <span>Draft Response</span>
+      </button>
+    `;
+    container.appendChild(card);
+  });
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
 }
 
 function populateProductFilter(products) {
@@ -393,8 +598,8 @@ function renderReviewsTable(reviews) {
   if (reviews.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="py-8 text-center text-slate-400 text-xs italic">
-          No reviews found matching the selected filters.
+        <td colspan="7" class="py-8 text-center text-slate-500 text-xs italic">
+          No customer reviews matched the selected filter criteria.
         </td>
       </tr>
     `;
@@ -409,12 +614,12 @@ function renderReviewsTable(reviews) {
     if (r.rating !== null && r.rating !== undefined) {
       starBadge = `
         <div class="flex items-center space-x-1">
-          <span class="font-bold text-slate-800">${r.rating}</span>
-          <i data-lucide="star" class="w-3.5 h-3.5 text-amber-500 fill-amber-500 inline"></i>
+          <span class="font-bold text-white font-mono">${r.rating}</span>
+          <i data-lucide="star" class="w-3.5 h-3.5 text-amber-400 fill-amber-400 inline"></i>
         </div>
       `;
     } else {
-      starBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500">Unknown</span>`;
+      starBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-dark-800 text-slate-400 border border-slate-700">Unknown</span>`;
     }
 
     // Mismatch warning
@@ -422,7 +627,7 @@ function renderReviewsTable(reviews) {
     if (r.is_rating_mismatch) {
       mismatchNotice = `
         <div class="mt-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold mismatch-badge">
-          <i data-lucide="alert-triangle" class="w-3 h-3 mr-1 text-amber-600"></i> Mismatch
+          <i data-lucide="alert-triangle" class="w-3 h-3 mr-1 text-amber-400"></i> Mismatch
         </div>
       `;
     }
@@ -438,7 +643,7 @@ function renderReviewsTable(reviews) {
     } else if (r.sentiment === "negative") {
       sentimentBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold sentiment-badge-negative">Negative</span>`;
     } else {
-      sentimentBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-400">N/A</span>`;
+      sentimentBadge = `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-dark-800 text-slate-400">N/A</span>`;
     }
 
     // Topic badges
@@ -447,17 +652,17 @@ function renderReviewsTable(reviews) {
     // Duplicate or Empty badge
     let metaBadge = "";
     if (r.status === "skipped_empty") {
-      metaBadge = `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">Empty</span>`;
+      metaBadge = `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-dark-800 text-slate-400 font-mono border border-slate-700">Empty</span>`;
     } else if (r.duplicate_of) {
-      metaBadge = `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono">Dup of ${r.duplicate_of}</span>`;
+      metaBadge = `<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 font-mono border border-blue-500/30">Dup of ${r.duplicate_of}</span>`;
     }
 
     // Prompt injection badge for R012
     let securityBadge = "";
     if ((r.review_text || "").toLowerCase().includes("ignore all previous instructions")) {
       securityBadge = `
-        <div class="mt-1 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-          <i data-lucide="shield-check" class="w-3 h-3 mr-1 text-purple-600"></i> Injection Defended
+        <div class="mt-1.5 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-950/60 text-purple-300 border border-purple-500/40">
+          <i data-lucide="shield-check" class="w-3 h-3 mr-1 text-purple-400"></i> Shielded: Injection Quarantined
         </div>
       `;
     }
@@ -466,38 +671,38 @@ function renderReviewsTable(reviews) {
     let actionCol = "";
     if (r.needs_reply) {
       actionCol = `
-        <button onclick="handleSuggestReply('${r.review_id}')" class="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition shadow-sm">
-          <i data-lucide="message-square-plus" class="w-3.5 h-3.5"></i>
+        <button onclick="handleSuggestReply('${r.review_id}')" class="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-white bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 rounded-lg transition shadow-sm">
+          <i data-lucide="message-square-plus" class="w-3.5 h-3.5 text-cyan-300"></i>
           <span>Suggest Reply</span>
         </button>
       `;
     } else {
-      actionCol = `<span class="text-[11px] text-slate-400">-</span>`;
+      actionCol = `<span class="text-[11px] text-slate-600">-</span>`;
     }
 
     tr.innerHTML = `
-      <td class="py-3 px-4 font-mono text-xs font-semibold text-slate-800 align-top">
+      <td class="py-3 px-4 font-mono text-xs font-bold text-slate-200 align-top">
         ${r.review_id}
-        <div class="text-[10px] font-normal text-slate-400">${r.date || ''}</div>
+        <div class="text-[10px] font-normal text-slate-500">${r.date || ''}</div>
         ${metaBadge}
       </td>
-      <td class="py-3 px-4 text-xs font-medium text-slate-900 align-top max-w-[140px] truncate" title="${r.product}">
+      <td class="py-3 px-4 text-xs font-semibold text-white align-top max-w-[140px] truncate" title="${r.product}">
         ${r.product}
       </td>
       <td class="py-3 px-4 text-xs align-top whitespace-nowrap">
         ${starBadge}
         ${mismatchNotice}
       </td>
-      <td class="py-3 px-4 text-xs text-slate-700 align-top max-w-xs">
-        <div class="line-clamp-2 hover:line-clamp-none transition-all">${r.review_text || '<i class="text-slate-400">[Empty]</i>'}</div>
+      <td class="py-3 px-4 text-xs text-slate-300 align-top max-w-xs">
+        <div class="line-clamp-2 hover:line-clamp-none transition-all">${r.review_text || '<i class="text-slate-500">[Empty]</i>'}</div>
         ${securityBadge}
       </td>
       <td class="py-3 px-4 align-top whitespace-nowrap space-y-1">
         <div>${sentimentBadge}</div>
         <div class="flex flex-wrap gap-1 max-w-[150px]">${topicBadges}</div>
       </td>
-      <td class="py-3 px-4 text-xs text-slate-600 align-top max-w-sm">
-        ${r.summary || '<span class="text-slate-400">-</span>'}
+      <td class="py-3 px-4 text-xs text-slate-300 align-top max-w-sm">
+        ${r.summary || '<span class="text-slate-500">-</span>'}
       </td>
       <td class="py-3 px-4 align-top text-right whitespace-nowrap">
         ${actionCol}
@@ -511,29 +716,60 @@ function renderReviewsTable(reviews) {
   }
 }
 
+// Suggested Reply Studio with Tone Customizer
 async function handleSuggestReply(reviewId) {
   const review = currentDataset.reviews.find(r => r.review_id === reviewId);
   if (!review) return;
 
+  activeModalReview = review;
   const modal = document.getElementById("replyModal");
   const modalReview = document.getElementById("modalReviewText");
   const modalReply = document.getElementById("modalReplyText");
   const copyBtnText = document.getElementById("copyBtnText");
 
   modalReview.textContent = `[${review.product}] "${review.review_text}"`;
-  modalReply.value = "Generating intelligent suggested merchant reply...";
+  modalReply.value = "Drafting tone-adaptive response...";
   copyBtnText.textContent = "Copy to Clipboard";
   modal.classList.remove("hidden");
+
+  fetchReplyWithTone(currentReplyTone);
+}
+
+function setReplyTone(tone) {
+  currentReplyTone = tone;
+  const toneBtns = {
+    empathetic: document.getElementById("toneEmpatheticBtn"),
+    solution: document.getElementById("toneSolutionBtn"),
+    refund: document.getElementById("toneRefundBtn")
+  };
+
+  Object.entries(toneBtns).forEach(([t, btn]) => {
+    if (t === tone) {
+      btn.className = "px-2.5 py-1 text-xs rounded-lg font-bold bg-indigo-600/40 text-cyan-300 border border-cyan-500/50 transition";
+    } else {
+      btn.className = "px-2.5 py-1 text-xs rounded-lg font-medium bg-dark-800 text-slate-400 border border-slate-700 hover:bg-dark-700 transition";
+    }
+  });
+
+  if (activeModalReview) {
+    fetchReplyWithTone(tone);
+  }
+}
+
+async function fetchReplyWithTone(tone) {
+  const modalReply = document.getElementById("modalReplyText");
+  modalReply.value = `Synthesizing ${tone} merchant reply...`;
 
   try {
     const res = await fetch("/api/suggest-reply", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        product: review.product,
-        review_text: review.review_text,
-        summary: review.summary,
-        topics: review.topics
+        product: activeModalReview.product,
+        review_text: activeModalReview.review_text,
+        summary: activeModalReview.summary,
+        topics: activeModalReview.topics,
+        tone: tone
       })
     });
 
@@ -541,7 +777,7 @@ async function handleSuggestReply(reviewId) {
     if (res.ok && data.reply) {
       modalReply.value = data.reply;
     } else {
-      modalReply.value = "Failed to generate reply: " + (data.error || "Unknown error");
+      modalReply.value = "Error generating reply: " + (data.error || "Unknown error");
     }
   } catch (err) {
     modalReply.value = "Network error: " + err.message;
@@ -550,6 +786,7 @@ async function handleSuggestReply(reviewId) {
 
 function closeReplyModal() {
   document.getElementById("replyModal").classList.add("hidden");
+  activeModalReview = null;
 }
 
 function copyModalReply() {
@@ -557,8 +794,45 @@ function copyModalReply() {
   textarea.select();
   navigator.clipboard.writeText(textarea.value);
   const copyBtnText = document.getElementById("copyBtnText");
-  copyBtnText.textContent = "Copied!";
+  copyBtnText.textContent = "Copied to Clipboard!";
   setTimeout(() => {
     copyBtnText.textContent = "Copy to Clipboard";
   }, 2000);
+}
+
+// Export Utilities
+function exportToJSON() {
+  if (!currentDataset) return;
+  const jsonStr = JSON.stringify(currentDataset, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "reviewlens_insights.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportToCSV() {
+  if (!currentDataset || !currentDataset.reviews) return;
+  const headers = ["review_id", "product", "rating", "sentiment", "topics", "summary", "needs_reply", "is_rating_mismatch"];
+  const rows = currentDataset.reviews.map(r => [
+    r.review_id,
+    `"${r.product}"`,
+    r.rating ?? "",
+    r.sentiment ?? "",
+    `"${(r.topics || []).join(';')}"`,
+    `"${(r.summary || '').replace(/"/g, '""')}"`,
+    r.needs_reply,
+    r.is_rating_mismatch
+  ]);
+
+  const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "reviewlens_cleaned_dataset.csv";
+  a.click();
+  URL.revokeObjectURL(url);
 }
